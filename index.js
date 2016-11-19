@@ -7,6 +7,7 @@ $(document).ready(function () {
  
   // Grab references for all of our elements.
   var messageContent = $('#messageContent'),
+      usernameContent = $('#usernameContent'),
       sendMessageButton = $('#sendMessageButton'),
       messageList = $('#messageList');
  
@@ -22,35 +23,71 @@ $(document).ready(function () {
  
     // Scroll to bottom of page
     $("html, body").animate({ scrollTop: $(document).height() - $(window).height() }, 'slow');
-  };
+  }
 
   function getSentiment(str) {
     $.post("https://gateway-a.watsonplatform.net/calls/text/TextGetEmotion?apikey=" + config.IBM + "&outputMode=json&text=" + encodeURI(str), function(response) {
-      // do things with response here!!!!!!!
-  //       "docEmotions": {
-  //   "anger": "0.163485",
-  //   "disgust": "0.012672",
-  //   "fear": "0.2507",
-  //   "joy": "0.104535",
-  //   "sadness": "0.546235"
-  // }
-      console.log(response);
-    })
+      findHueAndChange(response.docEmotions);
+      console.log(response.docEmotions);
+    });
+  }
 
+    var emotionHueValues = {
+      anger: "1000",
+      fear: "9000",
+      disgust: "22000",
+      joy: "16500",
+      sadness: "44920"
+    };
 
+  function findHueAndChange(emotions) {
+    var primaryEmotionVal = 0.00;
+    var primaryEmotion = "";
+    var secondaryEmotionVal = 0.00;
+    var secondaryEmotion = "";
+    // determines primary emotion
+    for (var key in emotions) {
+      if (emotions[key] > primaryEmotionVal) {
+        primaryEmotionVal = emotions[key];
+        primaryEmotion = key;
+      }
+    }
+    // determines secondary emotions
+    for (var key2 in emotions) {
+      if (emotions[key2] > secondaryEmotionVal && key2 !== primaryEmotion) {
+        secondaryEmotionVal = emotions[key2];
+        secondaryEmotion = key2;
+      }
+    }
 
+    console.log("emotions", primaryEmotion, secondaryEmotion);
 
+    $.ajax({type: "PUT",
+            url: "http://192.168.10.108/api/" + config.HUE + "/lights/1/state",
+            data: '{"hue":'+ emotionHueValues[primaryEmotion]+'}'
+    });
+
+    $.ajax({type: "PUT",
+            url: "http://192.168.10.108/api/" + config.HUE + "/lights/2/state",
+            data: '{"hue":'+ emotionHueValues[primaryEmotion]+'}'
+    });
+
+    $.ajax({type: "PUT",
+            url: "http://192.168.10.108/api/" + config.HUE + "/lights/3/state",
+            data: '{"hue":'+ emotionHueValues[secondaryEmotion]+'}'
+    });
   }
  
   // Compose and send a message when the user clicks our send message button.
   sendMessageButton.click(function (event) {
     var message = messageContent.val();
+    var username = usernameContent.val();
  
     if (message != '') {
       pubnub.publish({
         channel: 'chat',
         message: {
-          username: 'Liz',
+          username: username,
           text: message
         }
       });
