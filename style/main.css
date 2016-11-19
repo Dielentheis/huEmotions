@@ -1,0 +1,30 @@
+.heading {
+	font-family: "Raleway";
+	font-size: 56px;
+	color: #EEEEEE;
+	margin: 40 auto 0 auto;
+}
+
+.subheader {
+	font-family: "Raleway";
+	font-size: 16px;
+	color: #EEEEEE;
+	margin: 0 auto 20 auto;
+}
+
+.main {
+	width: 60%;
+	margin: 0 auto;
+}
+
+#message-form {
+	margin: 15px;
+}
+
+.ui-body-a, .ui-body-a input, .ui-body-a select, .ui-body-a textarea, .ui-body-a button, .ui-btn-up-a, .ui-btn-hover-a, .ui-btn-down-a {
+	font-family: "Raleway";
+}
+
+li {
+	padding: 0 15px 0 15px;
+}
