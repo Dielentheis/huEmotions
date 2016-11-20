@@ -25,26 +25,50 @@ $(document).ready(function () {
     $("html, body").animate({ scrollTop: $(document).height() - $(window).height() }, 'slow');
   }
 
+  var emotions = {};
+  var score = 0;
+
   function getSentiment(str) {
-    $.post("https://gateway-a.watsonplatform.net/calls/text/TextGetEmotion?apikey=" + config.IBM + "&outputMode=json&text=" + encodeURI(str), function(response) {
-      findHueAndChange(response.docEmotions);
-      console.log(response.docEmotions);
+    $.ajax({
+      type: "POST",
+      url: "https://gateway-a.watsonplatform.net/calls/text/TextGetEmotion?apikey=" + config.IBM + "&outputMode=json&text=" + encodeURI(str),
+      success: function(response) {
+        emotions = response.docEmotions;
+        console.log(response.docEmotions);
+        findScore(str);
+      }
     });
   }
 
-    var emotionHueValues = {
-      anger: "1000",
-      fear: "9000",
-      disgust: "22000",
-      joy: "16500",
-      sadness: "44920"
-    };
+  function findScore(str) {
+    $.ajax({
+      type: "POST",
+      url: "https://gateway-a.watsonplatform.net/calls/text/TextGetTextSentiment?apikey=" + config.IBM + "&outputMode=json&text=" + encodeURI(str),
+      success: function(response) {
+        score = response.docSentiment.score;
+        console.log(response);
+        findHueAndChange();
+      }
+    });
+  }
 
-  function findHueAndChange(emotions) {
+  var emotionHueValues = {
+    anger: "1000",
+    fear: "9000",
+    disgust: "22000",
+    joy: "16500",
+    sadness: "44920"
+  };
+
+  function findHueAndChange() {
     var primaryEmotionVal = 0.00;
     var primaryEmotion = "";
     var secondaryEmotionVal = 0.00;
     var secondaryEmotion = "";
+    var satScore = score ? Math.floor(254 * Math.abs(score * 1.4)) : 220;
+    if (satScore > 254) {
+      satScore = 254;
+    }
     // determines primary emotion
     for (var key in emotions) {
       if (emotions[key] > primaryEmotionVal) {
@@ -52,29 +76,35 @@ $(document).ready(function () {
         primaryEmotion = key;
       }
     }
-    // determines secondary emotions
-    for (var key2 in emotions) {
-      if (emotions[key2] > secondaryEmotionVal && key2 !== primaryEmotion) {
-        secondaryEmotionVal = emotions[key2];
-        secondaryEmotion = key2;
+
+    if (primaryEmotionVal > .85) {
+      secondaryEmotion = primaryEmotion;
+    }
+    else {
+      // determines secondary emotions
+      for (var key2 in emotions) {
+        if (emotions[key2] > secondaryEmotionVal && key2 !== primaryEmotion) {
+          secondaryEmotionVal = emotions[key2];
+          secondaryEmotion = key2;
+        }
       }
     }
 
-    console.log("emotions", primaryEmotion, secondaryEmotion);
+    console.log("SATSCORE", satScore, '{"hue":'+ emotionHueValues[primaryEmotion]+', "sat":'+ satScore +'}');
 
     $.ajax({type: "PUT",
             url: "http://192.168.10.108/api/" + config.HUE + "/lights/1/state",
-            data: '{"hue":'+ emotionHueValues[primaryEmotion]+'}'
+            data: '{"hue":'+ emotionHueValues[primaryEmotion]+', "sat":'+ satScore +'}'
     });
 
     $.ajax({type: "PUT",
             url: "http://192.168.10.108/api/" + config.HUE + "/lights/2/state",
-            data: '{"hue":'+ emotionHueValues[primaryEmotion]+'}'
+            data: '{"hue":'+ emotionHueValues[primaryEmotion]+', "sat":'+ satScore +'}'
     });
 
     $.ajax({type: "PUT",
             url: "http://192.168.10.108/api/" + config.HUE + "/lights/3/state",
-            data: '{"hue":'+ emotionHueValues[secondaryEmotion]+'}'
+            data: '{"hue":'+ emotionHueValues[secondaryEmotion]+', "sat":'+ satScore +'}'
     });
   }
  
