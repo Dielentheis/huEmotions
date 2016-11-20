@@ -10,15 +10,66 @@ $(document).ready(function () {
       usernameContent = $('#usernameContent'),
       sendMessageButton = $('#sendMessageButton'),
       messageList = $('#messageList');
- 
-  // Handles all the messages coming in from pubnub.subscribe.
+
+// HANDLES SPECIAL INPUT (easter eggs)
+  function isEgg(str) {
+    var eggArr = ["lets dance", "cheer me up"]
+    str = str.toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,"");
+    return eggArr.indexOf(str) == -1 ? false : true;
+  }
+
+  function doEgg(str) {
+    if (str === "lets dance") {
+        $.ajax({type: "PUT",
+                url: "http://" + config.HUE_IP + "/api/" + config.HUE + "/lights/1/state",
+                data: '{"effect":"colorloop", "sat":240}'
+        });
+
+        window.setTimeout(function() {
+          $.ajax({type: "PUT",
+                  url: "http://" + config.HUE_IP + "/api/" + config.HUE + "/lights/2/state",
+                  data: '{"effect":"colorloop", "sat":240}'
+          });
+        }, 1000);
+
+        window.setTimeout(function() {
+          $.ajax({type: "PUT",
+                  url: "http://" + config.HUE_IP + "/api/" + config.HUE + "/lights/3/state",
+                  data: '{"effect":"colorloop", "sat":240}'
+          });
+        }, 1000);
+    }
+    else if (str === "cheer me up") {
+          $.ajax({type: "PUT",
+            url: "http://" + config.HUE_IP + "/api/" + config.HUE + "/lights/1/state",
+            data: '{"hue": 49000, "sat": 210, "effect":"none"}'
+          });
+
+          $.ajax({type: "PUT",
+                  url: "http://" + config.HUE_IP + "/api/" + config.HUE + "/lights/2/state",
+                  data: '{"hue": 59000, "sat": 140, "effect":"none"}'
+          });
+
+          $.ajax({type: "PUT",
+                  url: "http://" + config.HUE_IP + "/api/" + config.HUE + "/lights/3/state",
+                  data: '{"hue": 19000, "sat": 140, "effect":"none"}'
+          });
+    }
+  }
+
+  // Handles all the messages coming in from pubnub.subscribe - may delegate to easter egg handler
   function handleMessage(message) {
     var messageEl = $("<li class='message'>"
         + "<span class='username'>" + message.username + ": </span>"
         + message.text
         + "</li>");
     messageList.append(messageEl);
-    getSentiment(message.text);
+    if (isEgg(message.text)) {
+      doEgg(message.text)
+    }
+    else {
+      getSentiment(message.text);
+    }
     messageList.listview('refresh');
  
     // Scroll to bottom of page
@@ -34,7 +85,6 @@ $(document).ready(function () {
       url: "https://gateway-a.watsonplatform.net/calls/text/TextGetEmotion?apikey=" + config.IBM + "&outputMode=json&text=" + encodeURI(str),
       success: function(response) {
         emotions = response.docEmotions;
-        console.log(response.docEmotions);
         findScore(str);
       }
     });
@@ -46,7 +96,6 @@ $(document).ready(function () {
       url: "https://gateway-a.watsonplatform.net/calls/text/TextGetTextSentiment?apikey=" + config.IBM + "&outputMode=json&text=" + encodeURI(str),
       success: function(response) {
         score = response.docSentiment.score;
-        console.log(response);
         findHueAndChange();
       }
     });
@@ -90,21 +139,19 @@ $(document).ready(function () {
       }
     }
 
-    console.log("SATSCORE", satScore, '{"hue":'+ emotionHueValues[primaryEmotion]+', "sat":'+ satScore +'}');
-
     $.ajax({type: "PUT",
-            url: "http://192.168.10.108/api/" + config.HUE + "/lights/1/state",
-            data: '{"hue":'+ emotionHueValues[primaryEmotion]+', "sat":'+ satScore +'}'
+            url: "http://" + config.HUE_IP + "/api/" + config.HUE + "/lights/1/state",
+            data: '{"hue":'+ emotionHueValues[primaryEmotion]+', "sat":'+ satScore +', "effect":"none"}'
     });
 
     $.ajax({type: "PUT",
-            url: "http://192.168.10.108/api/" + config.HUE + "/lights/2/state",
-            data: '{"hue":'+ emotionHueValues[primaryEmotion]+', "sat":'+ satScore +'}'
+            url: "http://" + config.HUE_IP + "/api/" + config.HUE + "/lights/2/state",
+            data: '{"hue":'+ emotionHueValues[primaryEmotion]+', "sat":'+ satScore +', "effect":"none"}'
     });
 
     $.ajax({type: "PUT",
-            url: "http://192.168.10.108/api/" + config.HUE + "/lights/3/state",
-            data: '{"hue":'+ emotionHueValues[secondaryEmotion]+', "sat":'+ satScore +'}'
+            url: "http://" + config.HUE_IP + "/api/" + config.HUE + "/lights/3/state",
+            data: '{"hue":'+ emotionHueValues[secondaryEmotion]+', "sat":'+ satScore +', "effect":"none"}'
     });
   }
  
